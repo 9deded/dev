@@ -1,0 +1,22 @@
+# [Partial Views](https://learn.microsoft.com/en-us/aspnet/core/mvc/views/partial)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

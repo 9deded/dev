@@ -1,0 +1,1 @@
+[HTMX](https://www.jetbrains.com/guide/dotnet/tutorials/htmx-aspnetcore/)
