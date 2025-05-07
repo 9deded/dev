@@ -1,14 +1,14 @@
 # [Angular Signal](https://angular.dev/guide/signals)
-Angular Signals is a system that granularly tracks how and where your state is used throughout an application allowing the framwork to optimize rendering updates.
+> Angular Signals is a system that granularly tracks how and where your state is used throughout an application allowing the framwork to optimize rendering updates.
 
-### What are signals?
+## What are signals?
 a **signal** is a wrapper around a value that notifies interested consumers when that value changes. Signals can contain any value from primitives to complex data structures.
 
 you read a signal's value by calling its getter function, which allows Angular to track where the signal is used.
 
 Signals may be either *writable* or *read-only*.
 
-#### Writable signals
+## Writable signals
 writable signals provide an API for updating their values directly. You create writable signals by calling the `signal` function with the signal's initial value:
 ```ts
 const count = signal(0);
@@ -28,7 +28,7 @@ count.update(value => value + 1);
 writable signals have the type `WritableSignal`.
 
 
-### Computed signals
+## Computed signals
 **Compute signal** are read-only signals that derive their value from other signals. You define computed signals using the `computed` function and specifying a derivation:
 ```ts
 const count: WritableSignal<number> = signal(0);
@@ -189,7 +189,7 @@ effect(() => {
 });
 ```
 
-## Effect cleanup functions
+### Effect cleanup functions
 effects might start long-running operations, which you should cancel if the effect is destroyed or runs again before the first operation finished. when you create an effect, your function can optionally accept an `onCleanup` function as its first parameter. this `onCleanup` function lets you register a callback taht is invoked before the next run of th effect begins or when the effect is destroyed.
 ```ts
 effect((onCleanuo) => {
@@ -205,15 +205,161 @@ effect((onCleanuo) => {
 })
 ```
 
-## Using signals with RxJS
+### Using signals with RxJS
 
 see [RxJS interop with Angular signals](https://angular.dev/ecosystem/rxjs-interop) for details on interoperability between signals and RxJS.
-
-
+\
+\
+\
+\
+\
+***
+***
+***
+\
+\
+\
+\
+\
 # [Dependent state with `linkedSignal`](https://angular.dev/guide/signals/linked-signal)
+> **IMPORTANT:** `linkedSignal` is developer preview. it's ready for you to try, but it might change before it is stable. -- 202505
+
+the `signal` function to hold some state in your Angular code. sometimes, this state depends on some *other* state. for eexample, imaginge a component that lets the user select a shipping method for an order:
+```ts
+@Component({ /* ... */ })
+export class ShippingMethodPicker {
+    shippingOptions: Signal<ShippingMethod[]> = getShippingOptions();
+
+    // select the first shipping option by default.
+    selectedOption = signal(this.shippingOptions()[0]);
+
+    changeShipping(newOptionIndex: number){
+        this.selectedOption.set(this.shippingOptions()[newOptionIndex]);
+    }
+}
+```
+in this example, the `selectedOption` defaults to the first option, but changes if the user selects another option. but ` shippingOptions` is a signal -- its value may change! if `shippingOptions` changes, `selectedOption` may contain a value that is no longer a valid option.
+
+**the `linkedSignal` function lets you create a signal to hold some state that is intrinsically linked to some other state.** revisiting the sexample above, `linkedSignal` can replace `signal`:
+```ts
+@Component({ /* ... */ })
+export class ShippingMethodPicker {
+    shippingOptions: Signal<ShippingMethod[]> = get ShippingOptions();
+
+    // initialize selectedOption to the first shipping option.
+    selectedOption = linkedSignal(() => this.shippingOptions()[0]);
+
+    changeShipping(index: number){
+        this.selectedOption.set(this.hippingOptions()[index]);
+    }
+}
+```
+`linkedSignal` works similarly to `signal` with one key difference -- instead of passing a default value, you pass a *computation function*, just like `computed`. when the value of the computation changes, the value of the `linkedSignal` changes to the computation result. this helps ensure that the `linkedSignal` always has a valid value.
+
+the folling example show how the value of a `linkedSignal` can change based on its linked state:
+```ts
+const shippingOption = signal(['Ground', 'Air', 'Sea']);
+const selectedOption = linkedSignal(() => shppingOptions()[0]);
+
+console.log(selectedOption()); // 'Ground'
+
+selectedOption.set(shippingOptions()[2]);
+console.log(selectedOption()); // 'Sea'
+
+shippingOptions.Set(['Email', 'Call', 'Postal']);
+console.log(selectedOptions()); // 'Email'
+```
+
+## Accounting for previous state
+in some cases, the computation for a `linkedSignal` needs to account for the previous value of the `linkedSignal`.
+
+in the example above, `selectedOption` always updates back to the first option when `shoppingOptions` changes. you may, however, want to preserve the suer's selection if their selected options is still somewhere in the list. to accomplish this, you can create a `linkedSignal` with a separate *source* and *computation*:
+```typescript
+interface ShippingMethod {
+    id: number;
+    name: string;
+}
+
+@Component({ /* ... */ })
+export class ShippingMethodPicker {
+    constructor(){
+        this.changeShipping(2);
+        this.changeShippingOptions();
+
+        console.log(this.selectedOption()); // {"id":2, "name":"Postal"}
+    }
+
+    shippingOptions = signal<ShippingMethod[]>([
+        { id: 0, name: 'Ground' },
+        { id: 1, name: 'Air' },
+        { id: 2, name: 'Sea' }
+    ]);
+
+    selectedOption = linkedSignal<ShippingMethod[], ShppingMethod>({
+        // `selectedOptions` is set the `computation` result whenever this `source`
+        source: this.shippingOptions,
+        computation: (newOptions, previous) => {
+            // if the newOptions contain the previously selected option, preserve that selection. otherwise, default to the first option.
+            return (newOptions.find((opt) => opt.id == prevoius?.value.id) ?? newOptions[0]);
+        }
+    });
+
+    changeShipping(index:number){
+        this.selectedOption.set(this.shippingOptions()[index]);
+    }
+
+    changeShippingOptions(){
+        this.shippingOptions.set([
+            { id: 0, name: 'Email' },
+            { id: 1, name: 'Sea' },
+            { id: 2, name: 'Postal' }
+        ]);
+    }
+}
+```
+when you crate a linkedSignal, you can pass an object with separate `source` and `computation` properties instead of providing just a computation.
+
+the `source` can be any  signal, such as a `computed` or component `input`. when the value of `source` change, `linkedSignal` updates its value to the result of the provided `computation`.
+
+the `computation` is a function that receives the new calue of `source` and a `prevois` object. the `previous` objec has two properties -- `previous.source`  is the prevoius value of `source`, and `previous.value` is the previous result of the `computation`. you can use these previous values to decide the new result of the computation.
+
+> **HELPFUL:** when using the previous parameter, it is necessary to provide the generic type arguments of `linkedSignal` explicitly. the first generic type corresponds with the type of `source` and the second generic type determines the output type of `computation`.
+
+\
+
+## Custom equality comparison
+`linkedSignal`, as any other signal, can be configured with a custom equality function. this function is used by downstream dependencies to determine if that value of the `linkedSignal` (result of a computation) changed:
+```ts
+const activeUser = signal({ id:123. name:'Morgan', isAdmin:true });
+
+const activeUserEditCopy = linkedSignal(() => activeUser(). {
+    // consider the user as the same if it's the same `id`.
+    equal: (a,b) => a.id === b.id;
+});
+
+// or, if separating `source` and computation`
+const activeUserEditCopy = linkedSignal({
+    source: activeUser,
+    computation: user => user,
+    equal: (a,b) => a.id === b.id,
+});
+```
 
 
 
+\
+\
+\
+\
+\
+***
+***
+***
+\
+\
+\
+\
+\
 # [Async reactivity with resources](https://angular.dev/guide/signals/resource)
 > IMPORTANT: `resource` is [experimental](https://angular.dev/reference/releases#experimental). it's ready for you to try, but it might change before it is stable.
 most signal APIs are synchronous -- `signal`,`computed`,`input`, etc. However applications often need to deal with data that is available asynchronously. a `Resource` gives you a way to incorporate async data into your application's signal-based code.
@@ -260,18 +406,67 @@ if the `request` computation returns `undefined`, the loader function does not r
 
 
 ## Aborting requests
+a resourec aborts an outstanding request if the `request` computation changes while the resource is loading.
 
+you can use the `abortSignal` in `ResourceLoaderParams` to respond to aborted requests. for example, the native `fetch` function accepts an `AbortSignal`:
+```ts
+const userId: Signal<string> = getUserId();
 
+const userResource = resource({
+    request: () => ({id:userId()}),
+    loader: ({request, abortSignal}): Promise<User> => {
+        // fetch cancels any outstanding HTTP requests when the given `AbortSignal` indicates that the request has been aborted.
+        return fetch(`user/${request.id}`, {signal: abortSignal});
+    }
+});
+```
+see []`AbortSignal` on MDN](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) for more details on request cancellation with `AbortSignal`. 
 
 ## Reloading
+you can programmatically trigger a resource's `loader` by calling the `reload` method.
+```ts
+const userId: Signal<string> = getUserId();
+
+const userResource = resource({
+    request: () => ({id: userId()}),
+    loader: ({request}) => fetchUser(request)
+});
+
+// ...
+
+userResource.reload();
+```
 
 
-# Resource status
 
+## Resource status
+the resource object has several signal properties for reading the status of the asynchronous loader.
+| Property | Description |
+| -------- | ----------- |
+| `value`  | the most recent value of the resource, or `undefined` if no value has been received. |
+| `hasValue` | whether the resource has a value. |
+| `error`  | the most recent error encountered while running the resource's loader or `undefined` if no error has occurred. |
+| `isLoading ` | whether the resource loader is currently running. |
+| `status` | the resource's specific `ResourceStatus`, as described below. |
 
+the `status` signal provides a specific `ResourceStatus` that describes the state of the resource.
 
+| Status | `value()` | Description |
+| ------ | --------- | ----------- |
+| `Idel` | undefined | the resource has no valid request and the loader has not run. |
+| `Error` | undefined | the loader has encountered an error. |
+| `Loading` | undefined | the loader is running as a result of the `request` value changing. |
+| `Reloading` | Previous value | the loader is running as a result calling of the resource's `reload` method. |
+| `Resolved` | Resolved value | the loader has completed. |
+| `Loval` | Locally set value | the resource's value has been set locally via `.set()` or `.update()` value |
+|        |   |   |
 
+you can use this status information to conditionally display user interface elements, such loading indicators and error messages.
 
+\
+\
+\
+\
 ---
 ---
 ***
