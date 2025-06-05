@@ -115,3 +115,73 @@ function trimString(value: string| undefined): string{
 ```html
 <custom-slider [label]="systemValue" />
 ```
+
+
+### pass parameters to Angular components
+##### 1. using `@Input()` Decorator
+- the most common way to pass data from a parent component to a child component is using the `@Input()` decorator.
+- in the child component, decorate a property with `@Input()`. this makes the property available for binding in the parent component's template.
+```ts
+// child component child.component.ts
+imort { Component, Input } from '@angular/core';
+
+@Component({
+    selector: 'app-child',
+    template: '<div>{{ message }}</div>`
+})
+export class ChildComponent {
+    @Input() message: string = "";
+}
+```
+```html
+<!-- parent component template -->
+ <app-child message="Hello from parent"></app-child>
+```
+you can also use property binding (square brackets) to pass dynamic values.
+```html
+<app-child [message]="parentMessage"></app-child>
+```
+```ts
+// parent component
+export class ParentComponent {
+    parentMessage: string = "Dynamic message";
+}
+```
+
+#### 2. using route parameters
+- for components loaded via the router, you can pass data as route parameters.
+- define route parameters in your routing configuration.
+```ts app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { ProductDetailComponent } from './product-detail/product-detail.component';
+
+const routes: Routes = [{path: '/product/:id', component: ProductDetailComponent }];
+
+@NgModule({
+    imports: [RouterModule.forRoot(routes)],
+    exports: [RouterModule]
+})
+export class AppRoutingModule {}
+```
+- in the component, use `ActivatedRoute` to access the parameter.
+```ts
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+    selector: 'app-product-detail',
+    template: '<div>Product ID: {{ productId }}</div>'
+})
+export class ProductDetailComponent implement OnInti {
+    productId: string | null = null;
+
+    constructor(private route: ActivatedRoute) {}
+
+    ngOnInit(){
+        this.route.paramMap.subscribe((params) => {
+            this.productId = params.get('id');
+        });
+    }
+}
+```

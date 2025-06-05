@@ -1,8 +1,105 @@
 # [Templates](https://angular.dev/guide/templates/binding)
+in Angular, a **binding** creates a dynamic connection between a component's template and its data
+this connection ensures that changes to the component's data automatically update the rendered template.
+
+## render dynamic text with text interpolation
+you can bind dynamic text in templates with double curly brances, which tells Angular that it is responsible for the expression inside and ensuring it is updated currently.
+thsi is called **text interpolation**.
+
+```ts
+@Component({
+    template: `<p>your color preference is {{theme}}.</p>`
+})
+export class XComponent { theme = 'dark'; }
+```
+in this example, when the snippet is rendered to the page, Angular will replace `{{theme}}` with `dark`.
+```html
+<!-- rendered output -->
+<p>your color preference is dark.</p>
+ ```
+ all expression values are converted to a string. **objects** and **array** are converted using the value's `toString` method.
+
+
+## binding dynamic properties and attributes
+Angular supports binding dynamic values into ojbect properties and HTML attributes with square brackets.
+
+you can bind to properties on an HTML element's DOM instance,
+a [component](https://angular.dev/guide/components) instance, or
+a [directive](https://angular.dev/guide/directives) instance
+
+
+### Native element properties
+every HTML element has a corresponding DOM representation. 
+for example, each `<button>` HTML element corresponds to an instance of `HTMLButtonElement` in the DOM.
+in Angular, you use property bindings to set values directly to the DOM representation of the element.
+```html
+<!-- bind the `disabled` property on the button element's DOM object -->
+ <button [disabled]="isFormValid">Save</button>
+```
+in this example, every time `isFormValid` changes, 
+Angular automatically set the `disabled` property of the `HTMLButtonElement` instance.
+
+### Component and directive properties
+ehen an element is an Angular component, you can use property bindings to set component input properties using the same square bracket syntax.
+```html
+<!-- bind the `value` property on the `MyListbox` component instance. -->
+ <my-listbox [value]="selection">
+```
+in this example, every time `mySelection` changes, Angular automatically sets the `value` property of the `selection` instance.
+
+you can bind to directive properties as well.
+```html
+<!-- bind to the `ngSrc` property of the `NgOptimizedImage` directive -->
+ <img [ngSrc]="profilePhotoUrl" alt="the current user's profile photo">
+```
+
+### Attributes
+when you need to set HTML attributes that do not have corresponding DOM properties,
+such ass ARIA attributes or SVG attributes to elements in your template with the `attr.` prefix.
+```html
+<!-- bind the `role` attribute on the `<ul>` element to the component's `listRole` property. -->
+<ul [attr.role]="listRole">
+```
+
+
+
+
+
+
 
 [] = ? oneway:setProperty
 () = function()
 [()] = two ways
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 [Adding event listeners](https://angular.dev/guide/templates/event-listeners)
 ```ts
