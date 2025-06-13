@@ -236,3 +236,26 @@ the
 
 
 
+### install Angular Material
+add Angular Material to your application by running the following command:
+```command
+ng add @angular/material
+```
+
+### Display a component
+```ts
+import { MatSlideToggleModule } from '@angular/meterial/slide-toggle';
+
+@Component ({
+    imports: [ MatSlideToggleModule ]
+})
+class AppComponent {}
+```
+```html
+<mat-slide-toggle>toggle me</mat-slide-toggle>
+```
+```cmd
+ng serve
+```
+
+
