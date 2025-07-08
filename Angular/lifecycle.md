@@ -1,0 +1,1 @@
+# [Component Lifecycle](https://angular.dev/guide/components/lifecycle)
