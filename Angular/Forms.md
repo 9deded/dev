@@ -121,3 +121,28 @@ in template-driven forms, each form element is linked to a directive that manage
 
 the view-to-model diagram shows how data flows when an input field's value is changed from the view through the following steps.
 1.
+
+
+
+
+
+```html
+<mat-form-field appearance="fill">
+    <mat-label>Input label</mat-label>
+    <input matInput (click)="clickInput($event)" (click)="clickInput($event.target)" />
+</mat-form-field>
+```
+```ts
+import { Component } from '@angular/core';
+
+@Component({...})
+export class MyComponent {
+    clickInput(event: FocusEvent):void {
+        const inputElement = event.target as HTMLInputElement;
+        inputElement.select();
+    }
+    clickInput(inputElement: HTMLInputElement):void{
+        inputElement.select();
+    }
+}
+```
