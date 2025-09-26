@@ -47,3 +47,35 @@ this is especially helpful for screenreader users if you're using a non-standard
 
 
 
+### API
+API reference for Angular Material autocomplete
+`import { MatAutocompleteModule } from '@angular/material/autocomplete';`
+
+#### Components
+__MatAutocomplete__
+Autocomplete component.
+select: `mat-autocomplete`
+exported as: `matAutocomplete`
+
+##### Properties
+
+
+
+
+### CODE
+
+```ts
+
+    ngOnInit(){
+        this.filteredOptions = this.control.valueChanges.pipe(
+            startWith(''),
+            map(value => this.filter1(value || '')),
+        );
+    }
+
+    private filter1(value:string): string[]{
+        const filterValue = value.toLowerCase();
+
+        return this.options.filter(option => option.toLowerCase().includes(filterValue));
+    }
+```
