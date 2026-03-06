@@ -1,9 +1,240 @@
+## [Signals](https://angular.dev/guide/signals)
+
+Angular Signals is a system that granularly tracks how and where your state is used throughout an applicaiton, allowing the framework to optimize rendering updated.
+
+`signal` is a wrapper around a value that notifies interested consumers when that value changes. signals can contain any value, from primitives to complex data structures.
 
 
-[Signals](https://angular.dev/tutorials/signal-forms)
+##### Writable signals
+whitable signals provide an API for updating their values directly. you create writable signals by calling the `signal function with the signal's initial value:
+
+```ts
+const count = signal(0);
+
+// signals are getter functions - calling them reads their value.
+console.log("the count is " + count());
+
+// to change the value of a writable signal, either `.set()` it directly:
+count.set(3);
+
+// or use the `.update()` operation to compute a new value from the previous one:
+// increment the count by 1.
+count.update((value) => value + 1);
+```
+
+Whitable signal have the type `WritableSignal`.
+
+##### Converting writable signals to readonly
+`WritableSignal` provide a `asReadonly()` method that returns a readonly version of the signal.
+```ts
+@Injectable({providedIn: 'root'})
+export class CounterState {
+    // private writable state
+    private readonly _count = signal(0);
+
+    readonly count = this._count.asReadonly(); // public readonly
+
+    increment(){
+        this._count.update((v) => v+1);
+    }
+}
+@Component({
+    /* ... */
+})
+export class AwesomeCounter {
+    state = inject(CounterState);
+
+    count = this.state.count; // can read but not modify
+
+    increment() {
+        this.state.increment();
+    }
+}
+```
+
+the readonly signal reflects any changes made to the original wriable signal, but cannot be modified using `set()` or `update()` methods.
+
+-- IMPORTANT: the readonly signals do not have any built-in mechanism that would prevent deep-mutation or their value.
+
+
+
+#### Computed signals
+computed signal are read-only signals that derive their value from other signals, you define computed signals using the `computed` function and specifying a derivation:
+```ts
+const count: WritableSignal<number> = signal(0);
+const doubleCount: Signal<number> = computed(() => count() * 2);
+```
+
+`doubleCount` signal depends on the `count` signal.
+`count` updates, Angular knows that `doubleCount` needs to update as well.
+
+_ Computed signals are both lazily evaluated and memoized
+`doubleCount`'s derivation function does not run to calculate its value until the first time you read `doubleCount`.
+
+
+
+#### Computed signals are not writable signals
+you cannot directly assign values to a computed signal. that is,
+```ts
+doubleCount.set(3);
+```
+produces a compilation error, because `doubleCount` is not a `WritableSignal`.
+
+
+#### computed signal dependencies are dynamic
+
+```ts
+const showCount = signal(false);
+coust count = signal(0);
+coust conditionalCount = computed(() => {
+    if(showCount()){
+        return 'the count is ${count()}.';
+    } else {
+        return 'noting to see here!';
+    }
+})
+```
+
+### Reactive contexts
+reactive context is a runtime state where angular monitors signal reads to establish adependency.
+the code reading the signal is the _consumer_ and the signal being read is the _producer_.
+
+angular automaticcally enters a reactive context when:
+- `effect`, `afterRenderEffect` callback
+- `computed` signal.
+- `linkedSignal`.
+- `resource`'s params or loader function
+- rendering a component template (inbluding bindings in the host property).
+
+
+
+#### Asserts the reactive context
+`assertNotInReactiveContext` helper function to assert that code is not executing within a reactive context
+```ts
+import { assertNotInReactiveContext } from '@angular/core';
+
+function subscribeToEvents() {
+    assertNotInReactiveContext(subscribeToEvents);
+    // safe to proceed - subscription logic here
+}
+```
+
+
+#### reading without tracking dependencies
+`computed` or `effect` without creating a dependency.
+suppose that when `currentUser` changes, the value of a `counter` should be logged.
+you could create an `effect` which read both signals:
+```ts
+effect(() => {
+    console.log(`user set to ${currentUser()} and the counter is ${counter()}`);
+});
+
+// signal read from being tracked by calling its getter with `untracked`:
+effect(() => {
+    console.log(`user set to ${currentUser()} and the counter is ${untracked(counter())}`);
+});
+
+// `untracked` is also usefule when an effect needs to invoke some external code which shouldn't be treated as a dependency:
+effect(() => {
+    const user = currentUser();
+    untracked(() => {
+        // if the `loggingService` reads signals, they won't be counted as dependencies of this effect.
+        this.loggingService.log(`user set to ${user}`);
+    })
+})
+```
+
+#### Reactive context and async operations
+reactive context is only active for synchronous code. any signal reads that occure after an asynchronous boundary will not be tracked as dependencies.
+
+```ts
+effect(async () => {
+    const currentTheme = theme(); // read before await
+    const data = await fetchUserData();
+    console.log(`user: ${data.name}, theme: ${currentTheme}`);
+});
+
+effect(async () => {
+    // also works: signal is read before await (as function argument)
+    await renderContent(docContent());
+})
+```
+
+
+#### Advanced derivations
+`computed` handles simple readonly derivations, you might find yourself needing a writable state that is dependent on other signals, for more information se the dependent state with `linkedSignal` guide.
+
+All signal APIs are synchronous -- `signal`, `computed`, `input`, etc
+deal with data that is available asynchonously. a `Resource` gives you a way to incorporate async data into your application's signal-based code and still allow you to access its data synchronously. `Async reactivity with resources`
+
+
+#### Executing side effects on non-reactive APIs
+synchronous or asynchronous derivations are recommended when we want to react to state changes.
+`effect` or `afterRenderEffect` for those specific usecase. for more information see [side effects for non-reactive APIs guide](https://angular.dev/guide/signals/effect)
+
+
+#### Reading signals in `OnPush` components
+`OnPush` component's template, angular tracks the signal as a dependency of that component. when the value of that signal changes,
+Angular automatically [marks] the component to ensure it gets updated the next time change detection runs, refer to the [skipping component subtress](https://angular.dev/best-practices/skipping-subtrees) guide for more information about `OnPush` components.
+
+
+
+### Advanced topics
+
+#### signal equality functions
+
+```ts
+import _ from 'lodash';
+
+const data = signal(['test'], {equal: _.isEqual});
+
+// even though this is a defferent array instance, the deep equality function will consider the values to be qual, and the signal won't trigger any updated.
+data.set(['test']);
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 [Signal Forms](https://angular.dev/tutorials/signal-forms)
+
+
+
+
+
+
+
+
+
+
+
+
+
+[Signals Essentials](https://angular.dev/essentials/signals)
 ```ts
 import { signal } from '@angular/core';
 
@@ -30,11 +261,28 @@ console.log(firstNameCapitalized()); // NAME
 firstName.set("NewName");
 console.log(firstNameCapitalized()); // NEWNAME
 
-/// https://angular.dev/essentials/signals
+
 ```
 
 
-[Signals Forms Essentials](https://angular.dev/essentials/signal-forms)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[Signals Forms](https://angular.dev/essentials/signal-forms)
 
 ```ts
 // 1. create a form model with `signal()` 
